@@ -41,6 +41,3 @@
 4. Tap **Install** and open **OmniCast**!
 
 ---
-
-## 🌐 Web Download Page
-You can enable **GitHub Pages** in this repository's settings (`Settings -> Pages -> Deploy from branch main -> / (root)`) to have a live landing page for sharing with friends!
