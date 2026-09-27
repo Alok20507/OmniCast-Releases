@@ -1,0 +1,649 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>OmniCast — Universal Web Streamer & Android TV VLC Cast</title>
+  <meta name="description" content="Stream any web video, M3U8, or YouTube video straight to VLC on your Android TV via ADB with automatic 403 CDN bypass and Apple HIG dark aesthetics.">
+  <meta name="keywords" content="OmniCast, Android TV Cast, VLC Stream, ADB Cast, M3U8 Sniffer, 403 Forbidden Bypass, Video DownloadHelper">
+  <meta property="og:title" content="OmniCast — Stream Any Web Video to Android TV">
+  <meta property="og:description" content="Cast protected web streams and YouTube straight to VLC on Android TV with zero pairing. Download the universal APK.">
+  <meta property="og:image" content="./logo.png">
+  <meta property="og:type" content="website">
+  <link rel="icon" type="image/png" href="./logo.png">
+
+  <!-- Apple SF Pro / Inter font stack -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Outfit:wght@600;700;800&display=swap" rel="stylesheet">
+
+  <style>
+    :root {
+      --bg-base: #060608;
+      --bg-surface: #0f1015;
+      --bg-surface-elevated: #161720;
+      --border-subtle: rgba(255, 255, 255, 0.08);
+      --border-highlight: rgba(255, 255, 255, 0.16);
+      --accent-blue: #0A84FF;
+      --accent-blue-hover: #0071E3;
+      --accent-blue-glow: rgba(10, 132, 255, 0.35);
+      --accent-purple: #BF5AF2;
+      --accent-green: #30D158;
+      --text-primary: #FFFFFF;
+      --text-secondary: #9898A0;
+      --text-tertiary: #636366;
+      --font-display: 'Outfit', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      --font-body: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    body {
+      background-color: var(--bg-base);
+      color: var(--text-primary);
+      font-family: var(--font-body);
+      line-height: 1.5;
+      overflow-x: hidden;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* Ambient background gradient orbs */
+    .ambient-bg {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+      pointer-events: none;
+      z-index: 0;
+      overflow: hidden;
+    }
+
+    .orb {
+      position: absolute;
+      border-radius: 50%;
+      filter: blur(140px);
+      opacity: 0.18;
+      transform: translateZ(0);
+    }
+
+    .orb-1 {
+      width: 550px;
+      height: 550px;
+      background: radial-gradient(circle, var(--accent-blue) 0%, transparent 70%);
+      top: -150px;
+      left: 50%;
+      transform: translateX(-50%);
+    }
+
+    .orb-2 {
+      width: 400px;
+      height: 400px;
+      background: radial-gradient(circle, var(--accent-purple) 0%, transparent 70%);
+      bottom: 10%;
+      right: 5%;
+      opacity: 0.12;
+    }
+
+    /* Navigation */
+    header {
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      backdrop-filter: blur(24px);
+      -webkit-backdrop-filter: blur(24px);
+      background: rgba(6, 6, 8, 0.75);
+      border-bottom: 1px solid var(--border-subtle);
+    }
+
+    .nav-container {
+      max-width: 1120px;
+      margin: 0 auto;
+      padding: 16px 24px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      text-decoration: none;
+      color: inherit;
+    }
+
+    .brand img {
+      width: 40px;
+      height: 40px;
+      border-radius: 10px;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+    }
+
+    .brand span {
+      font-family: var(--font-display);
+      font-weight: 700;
+      font-size: 1.25rem;
+      letter-spacing: -0.02em;
+    }
+
+    .nav-actions {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+    }
+
+    .nav-btn-github {
+      color: var(--text-secondary);
+      text-decoration: none;
+      font-size: 0.9rem;
+      font-weight: 500;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 14px;
+      border-radius: 9999px;
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid var(--border-subtle);
+      transition: all 0.2s ease;
+    }
+
+    .nav-btn-github:hover {
+      color: var(--text-primary);
+      border-color: var(--border-highlight);
+      background: rgba(255, 255, 255, 0.1);
+    }
+
+    /* Main Container */
+    main {
+      flex: 1;
+      position: relative;
+      z-index: 1;
+      max-width: 1120px;
+      margin: 0 auto;
+      padding: 60px 24px 80px;
+    }
+
+    /* Hero Section */
+    .hero {
+      text-align: center;
+      max-width: 820px;
+      margin: 0 auto 80px;
+    }
+
+    .badge-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 6px 14px;
+      background: rgba(10, 132, 255, 0.12);
+      border: 1px solid rgba(10, 132, 255, 0.25);
+      border-radius: 9999px;
+      font-size: 0.82rem;
+      font-weight: 600;
+      color: var(--accent-blue);
+      margin-bottom: 24px;
+      letter-spacing: 0.01em;
+    }
+
+    .badge-pill .pulse-dot {
+      width: 7px;
+      height: 7px;
+      background: var(--accent-blue);
+      border-radius: 50%;
+      box-shadow: 0 0 8px var(--accent-blue);
+    }
+
+    .hero-title {
+      font-family: var(--font-display);
+      font-size: clamp(2.5rem, 5.5vw, 4.2rem);
+      font-weight: 800;
+      line-height: 1.1;
+      letter-spacing: -0.03em;
+      margin-bottom: 20px;
+      background: linear-gradient(180deg, #FFFFFF 20%, #A1A1A6 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    .hero-subtitle {
+      font-size: clamp(1.05rem, 2vw, 1.25rem);
+      color: var(--text-secondary);
+      font-weight: 400;
+      max-width: 680px;
+      margin: 0 auto 36px;
+      line-height: 1.6;
+    }
+
+    /* CTA Section */
+    .hero-actions {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 14px;
+    }
+
+    .btn-download-primary {
+      position: relative;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 12px;
+      padding: 16px 36px;
+      background: linear-gradient(180deg, var(--accent-blue) 0%, var(--accent-blue-hover) 100%);
+      color: #FFFFFF;
+      font-size: 1.1rem;
+      font-weight: 600;
+      text-decoration: none;
+      border-radius: 14px;
+      box-shadow: 0 10px 30px var(--accent-blue-glow);
+      transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+      border: 1px solid rgba(255, 255, 255, 0.2);
+    }
+
+    .btn-download-primary:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 14px 40px rgba(10, 132, 255, 0.55);
+      border-color: rgba(255, 255, 255, 0.35);
+    }
+
+    .btn-download-primary:active {
+      transform: translateY(1px);
+    }
+
+    .meta-tag {
+      font-size: 0.85rem;
+      color: var(--text-tertiary);
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .meta-tag span {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+    }
+
+    /* App Preview Card */
+    .preview-card {
+      background: var(--bg-surface);
+      border: 1px solid var(--border-subtle);
+      border-radius: 24px;
+      padding: 32px;
+      margin: 40px auto 80px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      text-align: center;
+      box-shadow: 0 24px 64px rgba(0, 0, 0, 0.6);
+      position: relative;
+      overflow: hidden;
+    }
+
+    .preview-card::before {
+      content: "";
+      position: absolute;
+      top: 0;
+      left: 10%;
+      right: 10%;
+      height: 1px;
+      background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.25), transparent);
+    }
+
+    .hero-logo-large {
+      width: 110px;
+      height: 110px;
+      border-radius: 26px;
+      margin-bottom: 20px;
+      box-shadow: 0 16px 36px rgba(0, 0, 0, 0.7);
+    }
+
+    /* Feature Grid */
+    .section-header {
+      text-align: center;
+      margin-bottom: 48px;
+    }
+
+    .section-title {
+      font-family: var(--font-display);
+      font-size: 2.2rem;
+      font-weight: 700;
+      letter-spacing: -0.02em;
+      margin-bottom: 12px;
+    }
+
+    .section-desc {
+      color: var(--text-secondary);
+      font-size: 1rem;
+      max-width: 540px;
+      margin: 0 auto;
+    }
+
+    .features-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+      gap: 24px;
+      margin-bottom: 80px;
+    }
+
+    .feature-card {
+      background: var(--bg-surface);
+      border: 1px solid var(--border-subtle);
+      border-radius: 20px;
+      padding: 28px;
+      transition: all 0.25s ease;
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+    }
+
+    .feature-card:hover {
+      border-color: var(--border-highlight);
+      background: var(--bg-surface-elevated);
+      transform: translateY(-4px);
+    }
+
+    .feature-icon-wrapper {
+      width: 48px;
+      height: 48px;
+      border-radius: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.5rem;
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid var(--border-subtle);
+    }
+
+    .feature-title {
+      font-size: 1.2rem;
+      font-weight: 600;
+      letter-spacing: -0.01em;
+      color: var(--text-primary);
+    }
+
+    .feature-text {
+      color: var(--text-secondary);
+      font-size: 0.95rem;
+      line-height: 1.6;
+    }
+
+    /* Steps Section */
+    .steps-container {
+      background: var(--bg-surface);
+      border: 1px solid var(--border-subtle);
+      border-radius: 24px;
+      padding: 40px 32px;
+      margin-bottom: 80px;
+    }
+
+    .steps-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+      gap: 32px;
+      margin-top: 32px;
+    }
+
+    .step-item {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .step-number {
+      width: 36px;
+      height: 36px;
+      border-radius: 50%;
+      background: rgba(10, 132, 255, 0.15);
+      color: var(--accent-blue);
+      border: 1px solid rgba(10, 132, 255, 0.3);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 700;
+      font-size: 0.95rem;
+    }
+
+    .step-heading {
+      font-size: 1.1rem;
+      font-weight: 600;
+    }
+
+    .step-body {
+      color: var(--text-secondary);
+      font-size: 0.92rem;
+      line-height: 1.5;
+    }
+
+    /* Footer */
+    footer {
+      border-top: 1px solid var(--border-subtle);
+      background: rgba(6, 6, 8, 0.9);
+      padding: 32px 24px;
+      text-align: center;
+      color: var(--text-tertiary);
+      font-size: 0.88rem;
+    }
+
+    footer a {
+      color: var(--text-secondary);
+      text-decoration: none;
+    }
+
+    footer a:hover {
+      color: var(--text-primary);
+    }
+
+    @media (max-width: 640px) {
+      main {
+        padding: 40px 16px 60px;
+      }
+      .preview-card {
+        padding: 24px 16px;
+      }
+      .steps-container {
+        padding: 28px 20px;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Ambient Light -->
+  <div class="ambient-bg" aria-hidden="true">
+    <div class="orb orb-1"></div>
+    <div class="orb orb-2"></div>
+  </div>
+
+  <!-- Header -->
+  <header>
+    <div class="nav-container">
+      <a href="#" class="brand">
+        <img src="./logo.png" alt="OmniCast Icon">
+        <span>OmniCast</span>
+      </a>
+      <div class="nav-actions">
+        <a id="navGithubLink" href="https://github.com/Alok20507/OmniCast-Releases" target="_blank" rel="noopener noreferrer" class="nav-btn-github">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
+            <path fill-rule="evenodd" clip-rule="evenodd" d="M12 2C6.477 2 2 6.484 2 12.017c0 4.425 2.865 8.18 6.839 9.504.5.092.682-.217.682-.483 0-.237-.008-.868-.013-1.703-2.782.605-3.369-1.343-3.369-1.343-.454-1.158-1.11-1.466-1.11-1.466-.908-.62.069-.608.069-.608 1.003.07 1.53 1.032 1.53 1.032.892 1.53 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.113-4.555-4.951 0-1.093.39-1.988 1.029-2.688-.103-.253-.446-1.272.098-2.65 0 0 .84-.27 2.75 1.026A9.564 9.564 0 0112 6.844c.85.004 1.705.115 2.504.337 1.909-1.296 2.747-1.027 2.747-1.027.546 1.379.202 2.398.1 2.651.64.7 1.028 1.595 1.028 2.688 0 3.848-2.339 4.695-4.566 4.943.359.309.678.92.678 1.855 0 1.338-.012 2.419-.012 2.747 0 .268.18.58.688.482A10.019 10.019 0 0022 12.017C22 6.484 17.522 2 12 2z"/>
+          </svg>
+          Releases
+        </a>
+      </div>
+    </div>
+  </header>
+
+  <!-- Main Content -->
+  <main>
+    <!-- Hero -->
+    <section class="hero">
+      <div class="badge-pill">
+        <span class="pulse-dot"></span>
+        <span id="versionBadge">OmniCast v1.0.0 • Public Release</span>
+      </div>
+
+      <h1 class="hero-title">Stream Any Web Video Straight to Android TV.</h1>
+      <p class="hero-subtitle">
+        Universal web media extraction, automatic 403 Forbidden CDN proxy bypass, and direct ADB VLC streaming for Android TV — all wrapped in an Apple HIG dark experience.
+      </p>
+
+      <div class="hero-actions">
+        <a id="btnDownload" href="./OmniCast-v1.0.0.apk" download class="btn-download-primary">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+            <polyline points="7 10 12 15 17 10"></polyline>
+            <line x1="12" y1="15" x2="12" y2="3"></line>
+          </svg>
+          <span id="btnDownloadText">Download OmniCast APK</span>
+        </a>
+
+        <div class="meta-tag">
+          <span>📦 v1.0.0</span>
+          <span>•</span>
+          <span>⚡ Universal APK (~7.2 MB)</span>
+          <span>•</span>
+          <span>📱 Android 5.0 to 15</span>
+        </div>
+      </div>
+    </section>
+
+    <!-- App Card / Visual -->
+    <div class="preview-card">
+      <img src="./logo.png" alt="OmniCast Logo" class="hero-logo-large">
+      <h2 style="font-family: var(--font-display); font-size: 1.5rem; margin-bottom: 8px;">Zero Pairing Hassle</h2>
+      <p style="color: var(--text-secondary); max-width: 580px; font-size: 0.95rem;">
+        No AirPlay receivers or fussy DLNA required. OmniCast speaks directly to VLC on your Android TV over local Wi-Fi with ADB commands and built-in proxying.
+      </p>
+    </div>
+
+    <!-- Features Grid -->
+    <section>
+      <div class="section-header">
+        <h2 class="section-title">Engineered Without Compromises</h2>
+        <p class="section-desc">Everything you need to turn your Android device into a powerhouse streaming commander.</p>
+      </div>
+
+      <div class="features-grid">
+        <!-- Feature 1 -->
+        <div class="feature-card">
+          <div class="feature-icon-wrapper">🛡️</div>
+          <h3 class="feature-title">403 Forbidden CDN Bypass</h3>
+          <p class="feature-text">
+            Protected sites like CineVibe and VDH links check Referer and Origin headers. OmniCast's local proxy injects browser credentials and rewrites M3U8 playlists so external players never fail.
+          </p>
+        </div>
+
+        <!-- Feature 2 -->
+        <div class="feature-card">
+          <div class="feature-icon-wrapper">📺</div>
+          <h3 class="feature-title">Direct ADB Android TV Cast</h3>
+          <p class="feature-text">
+            Connects directly to VLC on your Android TV via ADB over local Wi-Fi. Just enter your TV's IP once, and start streaming movies with one tap.
+          </p>
+        </div>
+
+        <!-- Feature 3 -->
+        <div class="feature-card">
+          <div class="feature-icon-wrapper">▶️</div>
+          <h3 class="feature-title">Instant YouTube TV Sharing</h3>
+          <p class="feature-text">
+            Tap "Share" inside the YouTube app and select OmniCast. The app automatically launches the stream in VLC on your TV without duplicate UI steps.
+          </p>
+        </div>
+
+        <!-- Feature 4 -->
+        <div class="feature-card">
+          <div class="feature-icon-wrapper">🔍</div>
+          <h3 class="feature-title">Universal Stream Sniffer</h3>
+          <p class="feature-text">
+            Automatically intercepts HLS (.m3u8), MP4, WebM, and chunked streams on any site you browse, organizing available qualities into clean selectable cards.
+          </p>
+        </div>
+
+        <!-- Feature 5 -->
+        <div class="feature-card">
+          <div class="feature-icon-wrapper">🚀</div>
+          <h3 class="feature-title">In-App Seamless Auto-Updater</h3>
+          <p class="feature-text">
+            When a new version is released, an Apple HIG update alert prompts you to download and install the update right inside the app.
+          </p>
+        </div>
+
+        <!-- Feature 6 -->
+        <div class="feature-card">
+          <div class="feature-icon-wrapper">🔋</div>
+          <h3 class="feature-title">Background Playback Lock</h3>
+          <p class="feature-text">
+            Equipped with a Foreground Media Playback service and high-performance Wi-Fi lock so playback never cuts out when you lock your screen or switch apps.
+          </p>
+        </div>
+      </div>
+    </section>
+
+    <!-- Installation Steps -->
+    <div class="steps-container">
+      <div class="section-header" style="margin-bottom: 24px;">
+        <h2 class="section-title">Quick Installation</h2>
+        <p class="section-desc">Get started in three simple steps.</p>
+      </div>
+
+      <div class="steps-grid">
+        <div class="step-item">
+          <div class="step-number">1</div>
+          <h3 class="step-heading">Download the APK</h3>
+          <p class="step-body">Click the download button above to save <code>OmniCast-v1.0.0.apk</code> to your Android phone.</p>
+        </div>
+        <div class="step-item">
+          <div class="step-number">2</div>
+          <h3 class="step-heading">Allow Install</h3>
+          <p class="step-body">Tap the notification and enable <em>"Install unknown apps"</em> for your browser if prompted.</p>
+        </div>
+        <div class="step-item">
+          <div class="step-number">3</div>
+          <h3 class="step-heading">Connect & Stream</h3>
+          <p class="step-body">Enable ADB on your TV, enter the TV IP in OmniCast, and tap any video link to launch VLC!</p>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <!-- Footer -->
+  <footer>
+    <div style="max-width: 1120px; margin: 0 auto; display: flex; flex-direction: column; gap: 8px;">
+      <p>© 2026 OmniCast. Built for fast, open, unrestricted media streaming.</p>
+      <p><a href="https://github.com/Alok20507/OmniCast-Releases" target="_blank" rel="noopener noreferrer">GitHub Repository</a> • <a href="./version.json">Version API</a></p>
+    </div>
+  </footer>
+
+  <script>
+    // Dynamically check version.json for the latest version tag & download link
+    fetch('./version.json')
+      .then(res => res.json())
+      .then(data => {
+        if (data && data.versionName) {
+          const badge = document.getElementById('versionBadge');
+          if (badge) badge.innerText = `OmniCast v${data.versionName} • Public Release`;
+          
+          const btn = document.getElementById('btnDownload');
+          const btnText = document.getElementById('btnDownloadText');
+          if (btn && data.downloadUrl) {
+            // If hosted online, prioritize the direct download or releases URL
+            btn.href = data.downloadUrl;
+            if (btnText) btnText.innerText = `Download OmniCast v${data.versionName} APK`;
+          }
+        }
+      })
+      .catch(err => {
+        console.log('Using local static fallback for download link', err);
+      });
+  </script>
+</body>
+</html>

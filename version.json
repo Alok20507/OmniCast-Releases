@@ -1,0 +1,7 @@
+{
+  "versionCode": 1,
+  "versionName": "1.0.0",
+  "downloadUrl": "https://github.com/Alok20507/OmniCast-Releases/releases/download/v1.0.0/OmniCast-v1.0.0.apk",
+  "changelog": "• Initial public release (v1.0.0)\n• Universal Android APK for all devices (ARM64, ARMv7, x86_64)\n• Direct ADB streaming to Android TV VLC\n• 403 Forbidden CDN proxy bypass for protected web streams\n• Apple HIG Dark UI aesthetic\n• In-app auto updater",
+  "forceUpdate": false
+}
